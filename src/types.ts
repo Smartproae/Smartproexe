@@ -189,3 +189,40 @@ export interface RemediationGuide {
   gpoPath?: string;
   impactAssessment: string;
 }
+
+export type AppTheme = 
+  | 'cyber-dark' 
+  | 'enterprise-navy' 
+  | 'clean-light' 
+  | 'terminal-emerald'
+  | 'classic-sysadmin' 
+  | 'classic-light';
+
+export interface ScanTargetItem {
+  id: string;
+  type: 'cidr' | 'ip';
+  value: string;
+  label: string;
+  enabled: boolean;
+}
+
+export interface MultiSubnetHost {
+  id: string;
+  subnet: string;
+  ip: string;
+  name: string;
+  role: string;
+  os: string;
+  deviceType: 'Server' | 'Workstation' | 'Laptop';
+  openPorts: number[];
+  adJoined: boolean;
+  domain: string;
+  privilegeStatus: string;
+  overallScore: number;
+  status: 'secure' | 'warning' | 'vulnerable';
+  smbStatus: string;
+  bitlocker: string;
+  defender: string;
+  patchLevel: string;
+  lastScanned: string;
+}

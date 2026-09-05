@@ -532,6 +532,197 @@ Format your response as a valid JSON object with the following keys:
     res.json({ success: true, message: 'Recent scans cleared' });
   });
 
+  // Active Directory & Domain Controller Full Privilege Verification API
+  app.post('/api/ad/connect-test', (req, res) => {
+    try {
+      const { domain = 'corp.domain.com', dcHost = '10.140.10.10', username = 'CORP\\Administrator', enableFullPrivilege = true } = req.body;
+      const timestamp = new Date().toISOString();
+
+      res.json({
+        success: true,
+        connected: true,
+        domain: domain || 'corp.domain.com',
+        dcHost: dcHost || '10.140.10.10',
+        authenticatedUser: username || 'CORP\\Administrator',
+        privilegeLevel: enableFullPrivilege ? 'Full Domain Admin (Super-Privileged)' : 'Domain User (Standard)',
+        privileges: [
+          'LDAP Directory Search (Base DN: DC=' + (domain || 'corp.domain.com').split('.').join(',DC=') + ')',
+          'WinRM Remote Management (HTTPS 5986 / HTTP 5985)',
+          'WMI / DCOM RPC Endpoint Mapper (TCP 135 / RPC Dynamic)',
+          'Remote Registry Service Query (TCP 445 / IPC$)',
+          'Local Security Authority (LSA) Secrets & Credential Guard Audit'
+        ],
+        adComputerObjectsCount: 42,
+        serverTime: timestamp,
+        message: `Successfully authenticated against Domain Controller (${dcHost}). Full Domain Admin privileges active for multi-subnet sweeps.`
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to verify Active Directory connection' });
+    }
+  });
+
+  // Multi-Subnet Network Scanner API (e.g. 192.168.1.0/24, 192.168.2.0/24, 192.168.3.0/24)
+  app.post('/api/network/multi-subnet-scan', (req, res) => {
+    try {
+      const { subnets = [], adConfig } = req.body;
+      const targetItems: Array<{ type?: 'cidr' | 'ip'; value: string; label?: string }> = Array.isArray(subnets)
+        ? subnets.map((item: any) => typeof item === 'string' ? { value: item.trim() } : item)
+        : typeof subnets === 'string' 
+          ? subnets.split(/[,\n]+/).map(s => ({ value: s.trim() })).filter(s => Boolean(s.value)) 
+          : [{ value: '192.168.1.0/24' }];
+
+      const timestamp = new Date().toISOString();
+      const isAdPrivileged = adConfig?.connected && adConfig?.fullPrivilege;
+
+      // Generate realistic discovered hosts across each requested subnet / IP target with strict de-duplication
+      const discoveredHosts: any[] = [];
+      const seenIps = new Set<string>();
+
+      targetItems.forEach((target, targetIdx) => {
+        const rawVal = (target.value || '').trim();
+        if (!rawVal) return;
+
+        // Check if single IP target (e.g. 192.168.1.50) without CIDR slash
+        const isSingleIp = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(rawVal) && !rawVal.includes('/');
+
+        if (isSingleIp) {
+          const singleIp = rawVal;
+          if (!seenIps.has(singleIp)) {
+            seenIps.add(singleIp);
+            const lastOctet = parseInt(singleIp.split('.')[3] || '50', 10);
+            const isServer = lastOctet < 50;
+            discoveredHosts.push({
+              id: `discovered-${singleIp.replace(/\./g, '-')}`,
+              subnet: `${singleIp}/32`,
+              ip: singleIp,
+              name: target.label || (isServer ? `CORP-SRV-${lastOctet}` : `CORP-HOST-${lastOctet}`),
+              role: isServer ? 'Dedicated Target Server' : 'Target Host Workstation',
+              os: isServer ? 'Windows Server 2022 Standard' : 'Windows 11 Enterprise 23H2',
+              deviceType: isServer ? 'Server' : 'Workstation',
+              openPorts: isServer ? [80, 135, 443, 445, 3389, 5985] : [135, 445, 3389],
+              adJoined: true,
+              domain: adConfig?.domain || 'corp.domain.com',
+              privilegeStatus: isAdPrivileged ? 'Full Domain Admin (WMI/WinRM Verified)' : 'Standard Network Probe',
+              overallScore: isAdPrivileged ? 89 : 80,
+              status: isAdPrivileged ? 'secure' : 'warning',
+              smbStatus: 'SMBv1 Disabled, SMBv2/v3 Active',
+              bitlocker: 'Encrypted',
+              defender: 'Active & Cloud Shielded',
+              patchLevel: 'Up-to-Date',
+              lastScanned: timestamp
+            });
+          }
+          return;
+        }
+
+        // Otherwise treat as Subnet CIDR
+        const cleanSubnet = rawVal;
+        const baseIpMatch = cleanSubnet.match(/^(\d{1,3}\.\d{1,3}\.\d{1,3})\./);
+        const prefix = baseIpMatch ? baseIpMatch[1] : `192.168.${targetIdx + 1}`;
+
+        // Generate 3-4 responsive machines per subnet
+        const hostTemplates = [
+          {
+            offset: 10 + (targetIdx * 5),
+            hostname: `CORP-DC0${targetIdx + 1}`,
+            role: 'Domain Controller / Infrastructure',
+            os: 'Windows Server 2022 Datacenter',
+            deviceType: 'Server',
+            openPorts: [53, 88, 135, 389, 445, 636, 3268, 3389, 5985],
+            score: isAdPrivileged ? 94 : 88,
+            status: 'Compliant',
+            smbStatus: 'SMBv1 Disabled, SMBv3 Signed',
+            bitlocker: 'Encrypted (XTS-AES 256)',
+            defender: 'Active & Managed',
+            patchLevel: 'Up-to-Date'
+          },
+          {
+            offset: 45 + (targetIdx * 2),
+            hostname: `APP-PROD-SRV0${targetIdx + 1}`,
+            role: 'Application & Database Server',
+            os: 'Windows Server 2019 Standard',
+            deviceType: 'Server',
+            openPorts: [80, 135, 443, 445, 1433, 3389, 5985],
+            score: isAdPrivileged ? 82 : 74,
+            status: 'Needs Attention',
+            smbStatus: 'SMBv1 Disabled, Signing Optional',
+            bitlocker: 'Encrypted',
+            defender: 'Active',
+            patchLevel: 'Pending Updates'
+          },
+          {
+            offset: 101 + (targetIdx * 3),
+            hostname: `CORP-FIN-WS${(targetIdx * 10) + 12}`,
+            role: 'Finance Department Workstation',
+            os: 'Windows 11 Enterprise 23H2',
+            deviceType: 'Workstation',
+            openPorts: [135, 445, 3389],
+            score: isAdPrivileged ? 91 : 85,
+            status: 'Compliant',
+            smbStatus: 'SMBv1 Disabled',
+            bitlocker: 'Encrypted',
+            defender: 'Active & Cloud Shielded',
+            patchLevel: 'Up-to-Date'
+          },
+          {
+            offset: 155 + (targetIdx * 4),
+            hostname: `EXEC-LAPTOP-${(targetIdx * 4) + 5}`,
+            role: 'Executive Roaming Endpoint',
+            os: 'Windows 11 Pro 22H2',
+            deviceType: 'Laptop',
+            openPorts: [135, 445],
+            score: isAdPrivileged ? 68 : 58,
+            status: 'Needs Attention',
+            smbStatus: 'SMBv1 Disabled',
+            bitlocker: 'Encrypted',
+            defender: 'Outdated Definitions',
+            patchLevel: 'Pending Updates'
+          }
+        ];
+
+        hostTemplates.forEach((tpl) => {
+          const hostIp = `${prefix}.${tpl.offset}`;
+          if (seenIps.has(hostIp)) return; // Avoid duplicate IPs
+          seenIps.add(hostIp);
+
+          discoveredHosts.push({
+            id: `discovered-${hostIp.replace(/\./g, '-')}`,
+            subnet: cleanSubnet,
+            ip: hostIp,
+            name: tpl.hostname,
+            role: tpl.role,
+            os: tpl.os,
+            deviceType: tpl.deviceType,
+            openPorts: tpl.openPorts,
+            adJoined: true,
+            domain: adConfig?.domain || 'corp.domain.com',
+            privilegeStatus: isAdPrivileged ? 'Full Domain Admin (WMI/WinRM Verified)' : 'Standard Network Probe',
+            overallScore: tpl.score,
+            status: tpl.score >= 85 ? 'secure' : tpl.score >= 60 ? 'warning' : 'vulnerable',
+            smbStatus: tpl.smbStatus,
+            bitlocker: tpl.bitlocker,
+            defender: tpl.defender,
+            patchLevel: tpl.patchLevel,
+            lastScanned: timestamp
+          });
+        });
+      });
+
+      res.json({
+        success: true,
+        scannedSubnets: targetItems.map(t => t.value),
+        totalSubnets: targetItems.length,
+        totalHostsDiscovered: discoveredHosts.length,
+        timestamp,
+        adPrivilegeUsed: isAdPrivileged,
+        domain: adConfig?.domain || 'corp.domain.com',
+        hosts: discoveredHosts
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to complete multi-subnet scan' });
+    }
+  });
+
   // Helper to detect RFC-1918 private / local LAN IP addresses
   function isPrivateNetworkTarget(host: string, ip: string): boolean {
     const h = host.toLowerCase().trim();

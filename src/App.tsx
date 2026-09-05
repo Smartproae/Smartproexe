@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, LayoutDashboard, Terminal, Settings, Upload, CheckCircle, Flame, AlertCircle, HelpCircle, HardDrive, RefreshCw, Clock, Database, Wrench, Users, UserCheck, ShieldCheck, Lock, LogIn, LogOut, Stethoscope, Heart, CheckCircle2, ArrowRight, Sparkles, Laptop, FileText, Layers, Zap } from 'lucide-react';
+import { Shield, LayoutDashboard, Terminal, Settings, Upload, CheckCircle, Flame, AlertCircle, HelpCircle, HardDrive, RefreshCw, Clock, Database, Wrench, Users, UserCheck, ShieldCheck, Lock, LogIn, LogOut, Stethoscope, Heart, CheckCircle2, ArrowRight, Sparkles, Laptop, FileText, Layers, Zap, Palette, Globe } from 'lucide-react';
 import { mockEndpoints, remediations } from './remediationData';
-import { Endpoint } from './types';
+import { Endpoint, AppTheme } from './types';
 import EndpointList from './components/EndpointList';
 import EndpointAuditView from './components/EndpointAuditView';
 import EndpointInventoryTable from './components/EndpointInventoryTable';
@@ -162,6 +162,15 @@ export default function App() {
   const [isGitHubModalOpen, setIsGitHubModalOpen] = useState(false);
   const [isAiThinkingModalOpen, setIsAiThinkingModalOpen] = useState(false);
   const [isAiAutoFixModalOpen, setIsAiAutoFixModalOpen] = useState(false);
+
+  // Global Theme & Classic View state
+  const [appTheme, setAppTheme] = useState<AppTheme>(() => {
+    return (localStorage.getItem('secops_app_theme') as AppTheme) || 'cyber-dark';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('secops_app_theme', appTheme);
+  }, [appTheme]);
 
   // Persist endpoints posture state changes
   useEffect(() => {
@@ -374,21 +383,33 @@ export default function App() {
   };
 
   return (
-    <div className={`min-h-screen text-[#F5F5F5] flex flex-col font-sans antialiased selection:bg-amber-400 selection:text-black transition-colors duration-700 ${
-      programStep === 'diagnose'
-        ? 'bg-[#030d1a]'
+    <div className={`min-h-screen flex flex-col font-sans antialiased selection:bg-amber-400 selection:text-black transition-colors duration-500 ${
+      (appTheme === 'clean-light' || appTheme === 'classic-light')
+        ? 'bg-[#f8fafc] text-slate-900'
+        : (appTheme === 'enterprise-navy' || appTheme === 'classic-sysadmin')
+        ? 'bg-[#071322] text-[#f1f5f9]'
+        : appTheme === 'terminal-emerald'
+        ? 'bg-[#040806] text-[#e2e8f0]'
+        : programStep === 'diagnose'
+        ? 'bg-[#030d1a] text-[#F5F5F5]'
         : programStep === 'improve'
-        ? 'bg-[#1a0c02]'
-        : 'bg-[#02180e]'
+        ? 'bg-[#1a0c02] text-[#F5F5F5]'
+        : 'bg-[#02180e] text-[#F5F5F5]'
     }`}>
       
       {/* Header Banner - SmartPro Consultancy Premium Branding */}
-      <header className={`border-b transition-colors duration-700 pt-8 pb-6 relative overflow-hidden ${
-        programStep === 'diagnose'
-          ? 'bg-gradient-to-r from-[#031525] via-[#082238] to-[#04111f] border-cyan-500/40 shadow-lg shadow-cyan-950/50'
+      <header className={`border-b transition-colors duration-500 pt-7 pb-5 relative overflow-hidden ${
+        (appTheme === 'clean-light' || appTheme === 'classic-light')
+          ? 'bg-white border-slate-200 shadow-sm text-slate-900'
+          : (appTheme === 'enterprise-navy' || appTheme === 'classic-sysadmin')
+          ? 'bg-gradient-to-r from-[#0a1c33] via-[#102a4c] to-[#0a1c33] border-blue-500/30 shadow-lg shadow-blue-950/40 text-white'
+          : appTheme === 'terminal-emerald'
+          ? 'bg-gradient-to-r from-[#06120b] via-[#0b1f13] to-[#06120b] border-emerald-500/40 shadow-lg shadow-emerald-950/40 text-emerald-100'
+          : programStep === 'diagnose'
+          ? 'bg-gradient-to-r from-[#031525] via-[#082238] to-[#04111f] border-cyan-500/40 shadow-lg shadow-cyan-950/50 text-white'
           : programStep === 'improve'
-          ? 'bg-gradient-to-r from-[#1c1203] via-[#2d1b05] to-[#170e02] border-amber-500/40 shadow-lg shadow-amber-950/50'
-          : 'bg-gradient-to-r from-[#021810] via-[#05261a] to-[#02130c] border-emerald-500/40 shadow-lg shadow-emerald-950/50'
+          ? 'bg-gradient-to-r from-[#1c1203] via-[#2d1b05] to-[#170e02] border-amber-500/40 shadow-lg shadow-amber-950/50 text-white'
+          : 'bg-gradient-to-r from-[#021810] via-[#05261a] to-[#02130c] border-emerald-500/40 shadow-lg shadow-emerald-950/50 text-white'
       }`}>
         {/* Subtle decorative elements */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
@@ -507,6 +528,66 @@ export default function App() {
               </div>
             </div>
             
+            {/* Global Visual Theme Switcher */}
+            <div className="flex items-center gap-1 bg-black/60 border border-white/20 rounded-lg p-1 font-mono text-xs shadow-md">
+              <span className="text-[10px] text-white/70 font-bold px-1.5 flex items-center gap-1">
+                <Palette className="w-3 h-3 text-cyan-400" />
+                Theme:
+              </span>
+              <button
+                type="button"
+                onClick={() => setAppTheme('cyber-dark')}
+                className={`px-2 py-1 rounded text-[10px] font-bold transition cursor-pointer flex items-center gap-1 ${
+                  appTheme === 'cyber-dark'
+                    ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-500/50 shadow-sm'
+                    : 'text-white/60 hover:text-white'
+                }`}
+                title="Deep Charcoal & Cyan Cyber Dark Theme"
+              >
+                <Zap className="w-2.5 h-2.5 text-cyan-400" />
+                Cyber Dark
+              </button>
+              <button
+                type="button"
+                onClick={() => setAppTheme('enterprise-navy')}
+                className={`px-2 py-1 rounded text-[10px] font-bold transition cursor-pointer flex items-center gap-1 ${
+                  appTheme === 'enterprise-navy' || appTheme === 'classic-sysadmin'
+                    ? 'bg-blue-600 text-white border border-blue-400 font-black shadow-sm'
+                    : 'text-white/60 hover:text-white'
+                }`}
+                title="Corporate Enterprise Active Directory / Navy Blue Console"
+              >
+                <Laptop className="w-2.5 h-2.5 text-blue-300" />
+                Enterprise Navy
+              </button>
+              <button
+                type="button"
+                onClick={() => setAppTheme('clean-light')}
+                className={`px-2 py-1 rounded text-[10px] font-bold transition cursor-pointer flex items-center gap-1 ${
+                  appTheme === 'clean-light' || appTheme === 'classic-light'
+                    ? 'bg-white text-slate-900 border border-slate-300 font-black shadow-sm'
+                    : 'text-white/60 hover:text-white'
+                }`}
+                title="Clean High-Contrast Daylight Enterprise Mode"
+              >
+                <Layers className="w-2.5 h-2.5 text-amber-500" />
+                Clean Daylight
+              </button>
+              <button
+                type="button"
+                onClick={() => setAppTheme('terminal-emerald')}
+                className={`px-2 py-1 rounded text-[10px] font-bold transition cursor-pointer flex items-center gap-1 ${
+                  appTheme === 'terminal-emerald'
+                    ? 'bg-emerald-950 text-emerald-300 border border-emerald-500 font-black shadow-sm'
+                    : 'text-white/60 hover:text-white'
+                }`}
+                title="Retro SysAdmin Terminal Phosphor Green Mode"
+              >
+                <Terminal className="w-2.5 h-2.5 text-emerald-400" />
+                Terminal
+              </button>
+            </div>
+
             <div className="flex flex-wrap items-center justify-center md:justify-end gap-2">
               <button
                 onClick={() => setIsSystemFastModalOpen(true)}
@@ -835,6 +916,23 @@ export default function App() {
                   onAlertThresholdChange={setAlertThreshold}
                   onClearAllEndpoints={handleClearAllEndpoints}
                   onRestoreDefaultEndpoints={handleRestoreDefaultEndpoints}
+                  appTheme={appTheme}
+                  onThemeChange={setAppTheme}
+                  onBatchAddEndpoints={(batch) => {
+                    setEndpoints(prev => {
+                      const existingIps = new Set(prev.map(e => e.ip));
+                      const toAdd = batch.filter(b => !existingIps.has(b.ip));
+                      const updated = prev.map(e => {
+                        const match = batch.find(b => b.ip === e.ip);
+                        return match || e;
+                      });
+                      const combined = [...toAdd, ...updated];
+                      if (combined.length > 0) {
+                        setSelectedEndpointId(combined[0].id);
+                      }
+                      return combined;
+                    });
+                  }}
                   onDeleteEndpoint={(id) => {
                     setEndpoints(prev => {
                       const remaining = prev.filter(e => e.id !== id);
