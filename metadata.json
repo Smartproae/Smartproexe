@@ -1,0 +1,8 @@
+{
+  "name": "Windows Endpoint Auditor & Posture Dashboard",
+  "description": "A centralized dashboard to report SMB, SSL/TLS, and NTLM vulnerability configurations for Windows servers and computers, featuring Gemini-powered AI Auto-Fix synthesis, PowerShell audit generation, and bulk remediation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
